@@ -41,7 +41,7 @@ option('gpl', type: 'feature', value: 'disabled',
 # Common options, automatically inherited by subprojects
 option('tests', type : 'feature', value : 'auto', description : 'Build tests')
 option('examples', type : 'feature', value : 'auto', description : 'Build examples')
-option('introspection', type : 'feature', value : 'auto', description : 'Generate introspection data')
+option('introspection', type : 'feature', value : 'enabled', description : 'Generate introspection data')
 option('nls', type : 'feature', value : 'auto', description : 'Enable native language support (translations)')
 option('orc', type : 'feature', value : 'auto', description : 'Enable Optimized Inner Loop Runtime Compiler')
 option('doc', type : 'feature', value : 'auto', description : 'Generate API documentation with hotdoc')

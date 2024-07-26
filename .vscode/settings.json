@@ -1,3 +1,4 @@
 {
-  "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild"
+  "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild",
+  "C_Cpp.default.compileCommands": "/opt/src/gstreamer-1.20.3/builddir/compile_commands.json"
 }
