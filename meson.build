@@ -6,7 +6,7 @@ project('gstreamer-full', 'c',
                      # but this can cause problems in the future. Remove it
                      # when it's no longer necessary.
                      'cpp_std=c++14',
-                     'prefix=/opt/vpf'])
+                     'prefix=/usr'])
 
 gst_version = '>= @0@'.format(meson.project_version())
 
