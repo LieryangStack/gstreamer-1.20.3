@@ -3548,7 +3548,7 @@ gst_splitmux_sink_request_new_pad (GstElement * element,
   GST_DEBUG_OBJECT (splitmux, "splitmuxsink pad %" GST_PTR_FORMAT
       " feeds queue pad %" GST_PTR_FORMAT, ret, q_sink);
 
-  /* 新创建的上下文，添加到 */
+  /* 新创建的上下文，添加到 contexts 链表中 */
   splitmux->contexts = g_list_append (splitmux->contexts, ctx);
 
   g_free (gname);

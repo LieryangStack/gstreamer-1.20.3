@@ -186,7 +186,7 @@ struct _GstSplitMuxSink
   GstVideoTimeCode *fragment_start_tc;
 
   /* Oldest GOP at head, newest GOP at tail */
-  GQueue pending_input_gops;
+  GQueue pending_input_gops; /* 前面的是 oldest gop , 队列最后面的是 newest gpo */
 
   /* expected running time of next fragment in timecode mode */
   GstClockTime next_fragment_start_tc_time;
