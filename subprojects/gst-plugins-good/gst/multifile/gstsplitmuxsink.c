@@ -1164,6 +1164,7 @@ send_eos_async (GstSplitMuxSink * splitmux, AsyncEosHelper * helper)
     pad = gst_pad_get_peer (ctx->srcpad);
   GST_SPLITMUX_UNLOCK (splitmux);
 
+  /* sinkpad发送下游事件 */
   gst_pad_send_event (pad, eos);
   GST_INFO_OBJECT (splitmux, "Sent async EOS on %" GST_PTR_FORMAT, pad);
 
@@ -1171,8 +1172,7 @@ send_eos_async (GstSplitMuxSink * splitmux, AsyncEosHelper * helper)
   g_free (helper);
 }
 
-/* Called with lock held, drops the lock to send EOS to the
- * pad
+/* Called with lock held, drops the lock to send EOS to the pad
  */
 static void
 send_eos (GstSplitMuxSink * splitmux, MqStreamCtx * ctx)
@@ -1240,9 +1240,11 @@ all_contexts_are_async_eos (GstSplitMuxSink * splitmux)
   return ret;
 }
 
-/* Called with splitmux lock held to check if this output
- * context needs to sleep to wait for the release of the
- * next GOP, or to send EOS to close out the current file
+
+/**
+ * 在持有 splitmux 锁的情况下调用此函数
+ * 以检查此输出上下文是否需要休眠以等待下一个 GOP（图像组）的释放
+ * 或发送 EOS（流结束标志）以关闭当前文件。
  */
 static GstFlowReturn
 complete_or_wait_on_out (GstSplitMuxSink * splitmux, MqStreamCtx * ctx)
@@ -1291,7 +1293,7 @@ complete_or_wait_on_out (GstSplitMuxSink * splitmux, MqStreamCtx * ctx)
 
         case SPLITMUX_OUTPUT_STATE_ENDING_FILE:
         case SPLITMUX_OUTPUT_STATE_ENDING_STREAM:
-          /* We've reached the max out running_time to get here, so end this file now */
+          /* 已经达到了最大运行时间（最大录像时间），我们现在应该结束这个文件 */
           if (ctx->out_eos == FALSE) {
             if (splitmux->async_finalize) {
               /* We must set EOS asynchronously at this point. We cannot defer
@@ -3071,8 +3073,7 @@ handle_mq_input (GstPad * pad, GstPadProbeInfo * info, MqStreamCtx * ctx)
       }
     }
 
-    /* Check whether we need to request next keyframe depending on
-     * current running time */
+    /* 检查是否需要根据当前运行时间请求下一个关键帧 */
     if (request_next_keyframe (splitmux, buf, running_time_dts) == FALSE) {
       GST_WARNING_OBJECT (splitmux,
           "Could not request a keyframe. Files may not split at the exact location they should");
@@ -3547,6 +3548,7 @@ gst_splitmux_sink_request_new_pad (GstElement * element,
   GST_DEBUG_OBJECT (splitmux, "splitmuxsink pad %" GST_PTR_FORMAT
       " feeds queue pad %" GST_PTR_FORMAT, ret, q_sink);
 
+  /* 新创建的上下文，添加到 */
   splitmux->contexts = g_list_append (splitmux->contexts, ctx);
 
   g_free (gname);

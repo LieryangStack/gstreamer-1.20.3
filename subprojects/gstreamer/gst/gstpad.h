@@ -1489,6 +1489,14 @@ GstFlowReturn		gst_pad_push_list			(GstPad *pad, GstBufferList *list);
 GST_API
 GstFlowReturn		gst_pad_pull_range			(GstPad *pad, guint64 offset, guint size,
 								 GstBuffer **buffer);
+
+/**
+ * @brief: 发送事件到@pad的对端pad（和另一个元素相连的pad）
+ *         这个函数主要是被 Pad处理事件函数调用 
+ * 
+ * @note: 如果@pad是srcpad，那么@event必须是下游事件
+ *        如果@pad是sinkpad，那么@event必须是上游游事件
+ */
 GST_API
 gboolean		gst_pad_push_event			(GstPad *pad, GstEvent *event);
 
@@ -1509,6 +1517,12 @@ GstFlowReturn		gst_pad_chain_list                      (GstPad *pad, GstBufferLi
 GST_API
 GstFlowReturn		gst_pad_get_range			(GstPad *pad, guint64 offset, guint size,
 								 GstBuffer **buffer);
+
+/**
+ * @brief: 直接调用的是pad->eventfunc
+ * @note: 如果@pad是sinkpad，@event必须是下游事件
+ *        如果@pad是srcpad，@event必须是上游事件
+ */
 GST_API
 gboolean		gst_pad_send_event			(GstPad *pad, GstEvent *event);
 

@@ -6023,6 +6023,9 @@ precheck_failed:
  * gst_pad_send_event:
  * @pad: a #GstPad to send the event to.
  * @event: (transfer full): the #GstEvent to send to the pad.
+ * 
+ * @note: 内部会直接调用 pad上面的事件处理函数，所以 source pad一定对应的是上游事件
+ *                                             sink pad一定对应的是下游事件
  *
  * Sends the event to the pad. This function can be used
  * by applications to send events in the pipeline.

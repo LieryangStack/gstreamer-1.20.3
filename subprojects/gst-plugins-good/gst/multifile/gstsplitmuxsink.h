@@ -46,11 +46,11 @@ typedef enum _SplitMuxInputState
 typedef enum _SplitMuxOutputState
 {
   SPLITMUX_OUTPUT_STATE_STOPPED,
-  SPLITMUX_OUTPUT_STATE_AWAITING_COMMAND,       /* Waiting first command packet from input */
-  SPLITMUX_OUTPUT_STATE_OUTPUT_GOP,     /* Outputting a collected GOP */
-  SPLITMUX_OUTPUT_STATE_ENDING_FILE,    /* Finishing the current fragment */
-  SPLITMUX_OUTPUT_STATE_ENDING_STREAM,  /* Finishing up the entire stream due to input EOS */
-  SPLITMUX_OUTPUT_STATE_START_NEXT_FILE /* Restarting after ENDING_FILE */
+  SPLITMUX_OUTPUT_STATE_AWAITING_COMMAND, /* Waiting first command packet from input */
+  SPLITMUX_OUTPUT_STATE_OUTPUT_GOP,       /* Outputting a collected GOP */
+  SPLITMUX_OUTPUT_STATE_ENDING_FILE,      /* Finishing the current fragment */
+  SPLITMUX_OUTPUT_STATE_ENDING_STREAM,    /* Finishing up the entire stream due to input EOS */
+  SPLITMUX_OUTPUT_STATE_START_NEXT_FILE   /* Restarting after ENDING_FILE */
 } SplitMuxOutputState;
 
 typedef struct _SplitMuxOutputCommand
@@ -165,7 +165,7 @@ struct _GstSplitMuxSink
   gchar *location;
   guint fragment_id;
   guint start_index;
-  GList *contexts;
+  GList *contexts; /* 存储 MqStreamCtx 的链表 */
 
   SplitMuxInputState input_state;
   GstClockTimeDiff max_in_running_time;
