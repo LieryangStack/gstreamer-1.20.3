@@ -567,7 +567,10 @@ gst_ffmpegviddec_set_format (GstVideoDecoder * decoder,
   if (ffmpegdec->max_threads == 0) {
     /* When thread type is FF_THREAD_FRAME, extra latency is introduced equal
      * to one frame per thread. We thus need to calculate the thread count ourselves */
-    if ((!(oclass->in_plugin->capabilities & AV_CODEC_CAP_AUTO_THREADS)) ||
+    /* ubuntu24.4以前 AV_CODEC_CAP_AUTO_THREADS  
+     * Ubuntu24.4 AV_CODEC_CAP_OTHER_THREADS
+     */
+    if ((!(oclass->in_plugin->capabilities & AV_CODEC_CAP_OTHER_THREADS)) ||
         (ffmpegdec->context->thread_type & FF_THREAD_FRAME))
       ffmpegdec->context->thread_count =
           MIN (gst_ffmpeg_auto_max_threads (), 16);
