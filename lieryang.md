@@ -1,0 +1,1 @@
+git config core.hooksPath /dev/null #表示不用钩子

@@ -12,7 +12,6 @@ prefix/
 /libnice
 /gst-plugins-bad
 /gst-plugins-ugly
-/gst-libav
 /gst-rtsp-server
 /gst-devtools
 /gst-integration-testsuites
@@ -24,6 +23,7 @@ prefix/
 /gst-python
 /gst-examples
 /gst-plugins-rs
+
 
 # Because of unwanted diff caused by redirect wrap files 
 # https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/1140
