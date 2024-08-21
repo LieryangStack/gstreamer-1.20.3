@@ -1070,6 +1070,10 @@ mq_stream_ctx_reset (MqStreamCtx * ctx)
   g_queue_clear (&ctx->queued_bufs);
 }
 
+/**
+ * @brief: Mux元素前面的队列元素相关上下文
+ *         创建一个mux queue结构体存储信息
+ */
 static MqStreamCtx *
 mq_stream_ctx_new (GstSplitMuxSink * splitmux)
 {
@@ -1634,6 +1638,9 @@ request_next_keyframe (GstSplitMuxSink * splitmux, GstBuffer * buffer,
   return gst_pad_push_event (splitmux->reference_ctx->sinkpad, ev);
 }
 
+/**
+ * @brief: 监听队列queue的src_pad
+ */
 static GstPadProbeReturn
 handle_mq_output (GstPad * pad, GstPadProbeInfo * info, MqStreamCtx * ctx)
 {
@@ -2754,6 +2761,9 @@ check_completed_gop (GstSplitMuxSink * splitmux, MqStreamCtx * ctx)
   } while (splitmux->input_state == SPLITMUX_INPUT_STATE_WAITING_GOP_COLLECT);
 }
 
+/**
+ * @brief: 监听队列sink_pad
+ */
 static GstPadProbeReturn
 handle_mq_input (GstPad * pad, GstPadProbeInfo * info, MqStreamCtx * ctx)
 {
@@ -2768,11 +2778,12 @@ handle_mq_input (GstPad * pad, GstPadProbeInfo * info, MqStreamCtx * ctx)
 
   GST_LOG_OBJECT (pad, "Fired probe type 0x%x", info->type);
 
-  /* FIXME: Handle buffer lists, until then make it clear they won't work */
+  /* 没有去实现处理 buffer lists */
   if (info->type & GST_PAD_PROBE_TYPE_BUFFER_LIST) {
     g_warning ("Buffer list handling not implemented");
     return GST_PAD_PROBE_DROP;
   }
+
   if (info->type & GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM ||
       info->type & GST_PAD_PROBE_TYPE_EVENT_FLUSH) {
     GstEvent *event = gst_pad_probe_info_get_event (info);
@@ -3339,6 +3350,9 @@ lookup_muxer_pad (GstSplitMuxSink * splitmux, const gchar * sinkpad_name)
   return NULL;
 }
 
+/**
+ * @brief: 请求创建新的pad的时候会调用该函数
+ */
 static GstPad *
 gst_splitmux_sink_request_new_pad (GstElement * element,
     GstPadTemplate * templ, const gchar * name, const GstCaps * caps)
@@ -3471,6 +3485,7 @@ gst_splitmux_sink_request_new_pad (GstElement * element,
   else
     gname = g_strdup (name);
 
+  /* 创建一个视频队列元素 */
   qname = g_strdup_printf ("queue_%s", gname);
   if ((q = create_element (splitmux, "queue", qname, FALSE)) == NULL) {
     g_free (qname);
@@ -3495,19 +3510,21 @@ gst_splitmux_sink_request_new_pad (GstElement * element,
 
   gst_object_unref (GST_OBJECT (muxpad));
 
-  ctx = mq_stream_ctx_new (splitmux);
+  ctx = mq_stream_ctx_new (splitmux); /* ctx->splitmux = splitmux */
   /* Context holds a ref: */
   ctx->q = gst_object_ref (q);
   ctx->srcpad = q_src;
   ctx->sinkpad = q_sink;
   ctx->q_overrun_id =
-      g_signal_connect (q, "overrun", (GCallback) handle_q_overrun, ctx);
-  g_signal_connect (q, "underrun", (GCallback) handle_q_underrun, ctx);
+      g_signal_connect (q, "overrun", (GCallback) handle_q_overrun, ctx); /* 队列数据过多，下游没来得及处理速度 */
+  g_signal_connect (q, "underrun", (GCallback) handle_q_underrun, ctx); /* 队列数据过少，不够下游处理速度 */
 
+  /* 监听队列src_pad阻塞监听函数 */
   ctx->src_pad_block_id =
       gst_pad_add_probe (q_src,
       GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM | GST_PAD_PROBE_TYPE_EVENT_FLUSH,
       (GstPadProbeCallback) handle_mq_output, ctx, NULL);
+  
   if (is_primary_video && splitmux->reference_ctx != NULL) {
     splitmux->reference_ctx->is_reference = FALSE;
     splitmux->reference_ctx = NULL;
@@ -3520,6 +3537,7 @@ gst_splitmux_sink_request_new_pad (GstElement * element,
   ret = gst_ghost_pad_new_from_template (gname, q_sink, templ);
   g_object_set_qdata ((GObject *) (ret), PAD_CONTEXT, ctx);
 
+  /* 监听队列sink_pad */
   ctx->sink_pad_block_id =
       gst_pad_add_probe (q_sink,
       GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM | GST_PAD_PROBE_TYPE_EVENT_FLUSH |

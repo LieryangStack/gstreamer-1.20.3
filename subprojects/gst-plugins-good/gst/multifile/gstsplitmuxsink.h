@@ -87,13 +87,16 @@ typedef struct {
   gboolean sent_fku;
 } InputGop;
 
+/**
+ * @brief: Mux元素前面的队列queue相关
+ */
 typedef struct _MqStreamCtx
 {
-  GstSplitMuxSink *splitmux;
+  GstSplitMuxSink *splitmux; /* 分割 */
 
   guint q_overrun_id;
-  guint sink_pad_block_id;
-  guint src_pad_block_id;
+  guint sink_pad_block_id; /* 队列sink_pad阻塞监听函数 */
+  guint src_pad_block_id; /* 队列src_pad阻塞监听函数 */
   gulong fragment_block_id;
 
   gboolean is_reference;
@@ -112,11 +115,11 @@ typedef struct _MqStreamCtx
   GstClockTimeDiff in_running_time;
   GstClockTimeDiff out_running_time;
 
-  GstElement *q;
+  GstElement *q; /* 队列元素 */
   GQueue queued_bufs;
 
-  GstPad *sinkpad;
-  GstPad *srcpad;
+  GstPad *sinkpad; /* 队列元素的 sinkpad */
+  GstPad *srcpad; /* 队列元素的 srcpad */
 
   GstBuffer *cur_out_buffer;
   GstEvent *pending_gap;

@@ -139,6 +139,7 @@ foreach sp : subprojects
   match_gst_version = build_infos.get('match_gst_version', true)
 
   if match_gst_version
+    message(project_name)
     subproj = subproject(project_name, version: gst_version, required: is_required)
   elif sysdep != ''
       sysdep_dep = dependency(sysdep, version: sysdep_version, required: false)
