@@ -7,8 +7,7 @@ typedef struct _GstEvent GstEvent;
  * GstEventTypeFlags:
  * @GST_EVENT_TYPE_UPSTREAM:     Set if the event can travel upstream.
  * @GST_EVENT_TYPE_DOWNSTREAM:   Set if the event can travel downstream.
- * @GST_EVENT_TYPE_SERIALIZED:   Set if the event should be serialized with data
- *                               flow.
+ * @GST_EVENT_TYPE_SERIALIZED:   Set if the event should be serialized with data flow.
  * @GST_EVENT_TYPE_STICKY:       Set if the event is sticky on the pads.
  * @GST_EVENT_TYPE_STICKY_MULTI: Multiple sticky events can be on a pad, each
  *                               identified by the event name.
@@ -123,11 +122,14 @@ typedef enum {
 typedef enum {
   GST_EVENT_UNKNOWN               = GST_EVENT_MAKE_TYPE (0, 0),
 
-  /* bidirectional events */
+  /* 可双向传递的事件 */
+
+  /* 开始刷新操作。该事件会清除管道中的所有数据（比如queue元素存储的buffer,停止task运行）。并解除所有线程的阻塞 */
   GST_EVENT_FLUSH_START           = GST_EVENT_MAKE_TYPE (10, _FLAG(BOTH)),
+  /* 停止刷新操作。该事件会重置reset管道 running-time */
   GST_EVENT_FLUSH_STOP            = GST_EVENT_MAKE_TYPE (20, _FLAG(BOTH) | _FLAG(SERIALIZED)),
 
-  /* downstream serialized events */
+  /* 下游序列化事件 */
   GST_EVENT_STREAM_START          = GST_EVENT_MAKE_TYPE (40, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY)),
   GST_EVENT_CAPS                  = GST_EVENT_MAKE_TYPE (50, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY)),
   GST_EVENT_SEGMENT               = GST_EVENT_MAKE_TYPE (70, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED) | _FLAG(STICKY)),

@@ -102,7 +102,7 @@
 GST_DEBUG_CATEGORY_STATIC (debug_dataflow);
 #define GST_CAT_DEFAULT GST_CAT_PADS
 
-/* Pad signals and args */
+/* Pad信号 */
 enum
 {
   PAD_LINKED,
@@ -111,6 +111,7 @@ enum
   LAST_SIGNAL
 };
 
+/* Pad属性 */
 enum
 {
   PAD_PROP_0,
@@ -118,14 +119,29 @@ enum
   PAD_PROP_DIRECTION,
   PAD_PROP_TEMPLATE,
   PAD_PROP_OFFSET
-      /* FILL ME */
+  /* FILL ME */
 };
 
+/**
+ * _PAD_PROBE_TYPE_ALL_BOTH_AND_FLUSH 表示这五种
+ * 
+ * GST_PAD_PROBE_TYPE_BUFFER
+ * GST_PAD_PROBE_TYPE_BUFFER_LIST
+ * GST_PAD_PROBE_TYPE_EVENT_DOWNSTREAM,
+ * GST_PAD_PROBE_TYPE_EVENT_UPSTREAM,
+ * GST_PAD_PROBE_TYPE_QUERY_DOWNSTREAM
+ * GST_PAD_PROBE_TYPE_QUERY_UPSTREAM,
+*/
 #define _PAD_PROBE_TYPE_ALL_BOTH_AND_FLUSH (GST_PAD_PROBE_TYPE_ALL_BOTH | GST_PAD_PROBE_TYPE_EVENT_FLUSH)
 
 /* we have a pending and an active event on the pad. On source pads only the
  * active event is used. On sinkpads, events are copied to the pending entry and
  * moved to the active event when the eventfunc returned %TRUE. */
+/**
+ * 1. Pad会有一个待处理pending事件和active事件
+ * 2. source pads仅仅有active事件
+ * 3. sink pads会拷贝pending事件，然后当eventfunc函数返回TRUE的时候，会把待处理事件变成active事件
+ */
 typedef struct
 {
   gboolean received;
@@ -135,21 +151,19 @@ typedef struct
 struct _GstPadPrivate
 {
   guint events_cookie;
-  GArray *events;
-  guint last_cookie;
+  GArray *events; /* 使用GArray数组存储事件 */
+  guint last_cookie;  /* 只有使能额外检查的情况下才会使用 */
 
-  gint using;
-  guint probe_list_cookie;
+  gint using; /* Pad正在被使用的数量 */
+  guint probe_list_cookie; /* 记录探针函数的数量，@note: 这个值只会增加，不会在删除探针函数后就相应减少 */
 
-  /* counter of how many idle probes are running directly from the add_probe
-   * call. Used to block any data flowing in the pad while the idle callback
-   * Doesn't finish its work */
+  /* 计数器，表示直接通过add_probe调用正在运行的空闲探针回调函数的数目。
+    用于在idle回调函数未执行完成时，需要阻塞pad中流动的任何数据*/
   gint idle_running;
 
-  /* conditional and variable used to ensure pads only get (de)activated
-   * by a single thread at a time. Protected by the object lock */
-  GCond activation_cond;
-  gboolean in_activation;
+  /*条件和变量，用于确保一次只有一个线程激活或取消激活 pad。由对象锁保护*/
+  GCond activation_cond; /* 如果Pad已经被激活，预激活处理函数会进入阻塞等待此条件 */
+  gboolean in_activation; /* Pad是否已经被激活 */
 };
 
 typedef struct
@@ -160,19 +174,23 @@ typedef struct
 #define GST_PAD_IS_RUNNING_IDLE_PROBE(p) \
     (((GstPad *)(p))->priv->idle_running > 0)
 
+/**
+ * 遍历探针列表时候，传入的结构体 #ProbeMarshall
+ * 用于记录探针是否被调用
+*/
 typedef struct
 {
   GstPad *pad;
-  GstPadProbeInfo *info;
+  GstPadProbeInfo *info; /* 用于判断探针类型是否与info->type匹配，执行相应的探针函数 */
   gboolean dropped;
   gboolean pass;
   gboolean handled;
   gboolean marshalled;
 
-  gulong *called_probes;
-  guint n_called_probes;
-  guint called_probes_size;
-  gboolean retry;
+  gulong *called_probes; /* 数组记录探针ID */
+  guint n_called_probes; /* 目前已经记录了多少个探针 */
+  guint called_probes_size; /* called_probes可以记录多少个探针ID */
+  gboolean retry; /* 探针函数列表发生变化了，需要二次遍历调用探针函数 */
 } ProbeMarshall;
 
 static void gst_pad_dispose (GObject * object);
@@ -204,6 +222,7 @@ static GQuark buffer_quark;
 static GQuark buffer_list_quark;
 static GQuark event_quark;
 
+/* GstFlowReturn流返回值对应的quark和字符串 */
 typedef struct
 {
   const gint ret;
@@ -227,7 +246,7 @@ static GstFlowQuarks flow_quarks[] = {
  * gst_flow_get_name:
  * @ret: a #GstFlowReturn to get the name of.
  *
- * Gets a string representing the given flow return.
+ * 获取到 #GstFlowReturn 中 @ret的字符串名称
  *
  * Returns: a static string with the name of the flow return.
  */
@@ -249,7 +268,7 @@ gst_flow_get_name (GstFlowReturn ret)
  * gst_flow_to_quark:
  * @ret: a #GstFlowReturn to get the quark of.
  *
- * Get the unique quark for the given GstFlowReturn.
+ * 得到@ret对应的quark
  *
  * Returns: the quark associated with the flow return or 0 if an
  * invalid return was specified.
@@ -335,27 +354,28 @@ gst_pad_class_init (GstPadClass * klass)
   gobject_class->get_property = gst_pad_get_property;
 
   /**
-   * GstPad::linked:
-   * @pad: the pad that emitted the signal
-   * @peer: the peer pad that has been connected
-   *
-   * Signals that a pad has been linked to the peer pad.
-   */
+   * Pad被链接到对端Pad后，会发射该信号。
+   * 信号连接函数（没有返回值，除了默认的一个参数（发射信号的对象），再增加一个参数）：
+   * @pad: 发射信号的pad
+   * @peer: 被连接的pad（对端的pad）
+   * @return: 没有返回值
+  */
   gst_pad_signals[PAD_LINKED] =
       g_signal_new ("linked", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstPadClass, linked), NULL, NULL,
-      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD); /* G_STRUCT_OFFSET (GstPadClass, linked)表示默认的信号连接处理函数 */
+ 
   /**
-   * GstPad::unlinked:
-   * @pad: the pad that emitted the signal
-   * @peer: the peer pad that has been disconnected
-   *
-   * Signals that a pad has been unlinked from the peer pad.
-   */
+   * Pad被解除链接后，会发射该信号。
+   * 信号连接函数（没有返回值，除了默认的一个参数（发射信号的对象），再增加一个参数）：
+   * @pad: 发射信号的pad
+   * @peer: 被解除连接的pad（对端的pad）
+   * @return: 没有返回值
+  */
   gst_pad_signals[PAD_UNLINKED] =
       g_signal_new ("unlinked", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstPadClass, unlinked), NULL, NULL,
-      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD);
+      NULL, G_TYPE_NONE, 1, GST_TYPE_PAD); /* G_STRUCT_OFFSET (GstPadClass, unlinked)表示默认的信号连处理接函数 */
 
   pspec_caps = g_param_spec_boxed ("caps", "Caps",
       "The capabilities of the pad", GST_TYPE_CAPS,
@@ -402,9 +422,9 @@ gst_pad_init (GstPad * pad)
 
   GST_PAD_DIRECTION (pad) = GST_PAD_UNKNOWN;
 
-  GST_PAD_ACTIVATEFUNC (pad) = gst_pad_activate_default;
-  GST_PAD_EVENTFUNC (pad) = gst_pad_event_default;
-  GST_PAD_QUERYFUNC (pad) = gst_pad_query_default;
+  GST_PAD_ACTIVATEFUNC (pad) = gst_pad_activate_default; /* 默认激活函数（默认Push模式） */
+  GST_PAD_EVENTFUNC (pad) = gst_pad_event_default; /* 默认事件处理函数 */
+  GST_PAD_QUERYFUNC (pad) = gst_pad_query_default; /* 默认查询处理函数 */
   GST_PAD_ITERINTLINKFUNC (pad) = gst_pad_iterate_internal_links_default;
   GST_PAD_CHAINLISTFUNC (pad) = gst_pad_chain_list_default;
 
@@ -491,7 +511,12 @@ found:
   return ev;
 }
 
-/* should be called with OBJECT lock */
+/**
+ * @name: find_event
+ * @calledby: schedule_events ()
+ * @brief: 检查@pad是否有@event事件（通过事件对象地址判断的）
+ * @note: 该函数被调用应该使用对象锁
+*/
 static PadEvent *
 find_event (GstPad * pad, GstEvent * event)
 {
@@ -547,10 +572,13 @@ remove_event_by_type (GstPad * pad, GstEventType type)
   }
 }
 
-/* check all events on srcpad against those on sinkpad. All events that are not
- * on sinkpad are marked as received=%FALSE and the PENDING_EVENTS is set on the
- * srcpad so that the events will be sent next time */
-/* should be called with srcpad and sinkpad LOCKS */
+/**
+ * @name: schedule_events
+ * @calledby: pre_activate ()
+ *            gst_pad_link_full ()
+ * @brief: 如果 @sinkpad为NULL，或者在@sinkpad中无法找到@srcpad中对应的事件，标记@srcpad有未处理事件flag，以便下次发送这些事件
+ * @note: 应该在srcpad和sinkpad在互斥锁下被调用该函数
+*/
 static void
 schedule_events (GstPad * srcpad, GstPad * sinkpad)
 {
@@ -579,7 +607,8 @@ schedule_events (GstPad * srcpad, GstPad * sinkpad)
 typedef gboolean (*PadEventFunction) (GstPad * pad, PadEvent * ev,
     gpointer user_data);
 
-/* should be called with pad LOCK */
+
+/* 调用前应该对 Pad 上锁 */
 static void
 events_foreach (GstPad * pad, PadEventFunction func, gpointer user_data)
 {
@@ -601,14 +630,13 @@ restart:
     if (G_UNLIKELY (ev->event == NULL))
       goto next;
 
-    /* take additional ref, func might release the lock */
+    /* 获取额外的ref, func可能会释放锁 */
     ev_ret.event = gst_event_ref (ev->event);
     ev_ret.received = ev->received;
 
     ret = func (pad, &ev_ret, user_data);
 
-    /* recheck the cookie, lock might have been released and the list could have
-     * changed */
+    /* 重新检查cookie，锁可能已被释放，列表可能已更改 */
     if (G_UNLIKELY (cookie != pad->priv->events_cookie)) {
       if (G_LIKELY (ev_ret.event))
         gst_event_unref (ev_ret.event);
@@ -932,6 +960,12 @@ gst_pad_get_direction (GstPad * pad)
   return result;
 }
 
+/**
+ * @param pad: #GstPad
+ * @param parent: @pad父对象
+ * @calledby: pad->activatefunc = gst_pad_activate_default;
+ * @brief: 设定@pad为GST_PAD_MODE_PUSH模式激活状态
+*/
 static gboolean
 gst_pad_activate_default (GstPad * pad, GstObject * parent)
 {
@@ -1093,10 +1127,10 @@ gst_pad_set_active (GstPad * pad, gboolean active)
   ACQUIRE_PARENT (pad, parent, no_parent);
   GST_OBJECT_UNLOCK (pad);
 
-  if (active) {
+  if (active) { /* 激活Pad */
     if (old == GST_PAD_MODE_NONE) {
       GST_DEBUG_OBJECT (pad, "activating pad from none");
-      ret = (GST_PAD_ACTIVATEFUNC (pad)) (pad, parent);
+      ret = (GST_PAD_ACTIVATEFUNC (pad)) (pad, parent); /* 默认虚函数是，PUSH模式下激活 */
       if (ret)
         pad->ABI.abi.last_flowret = GST_FLOW_OK;
     } else {
@@ -1104,7 +1138,7 @@ gst_pad_set_active (GstPad * pad, gboolean active)
           gst_pad_mode_get_name (old));
       ret = TRUE;
     }
-  } else {
+  } else { /* 停用Pad，调用内部函数会把Pad设定为None模式 */
     if (old == GST_PAD_MODE_NONE) {
       GST_DEBUG_OBJECT (pad, "pad was inactive");
       ret = TRUE;
@@ -1145,6 +1179,14 @@ failed:
   }
 }
 
+/**
+ * @name: activate_mode_internal
+ * @call: 
+ * @calledby: gst_pad_activate_default () 默认激活函数
+ *            gst_pad_activate_mode ()
+ * @note: 停用状态下的Pad，模式会被修改为 GST_PAD_MODE_NONE
+ * @brief: 
+*/
 static gboolean
 activate_mode_internal (GstPad * pad, GstObject * parent, GstPadMode mode,
     gboolean active)
@@ -1159,44 +1201,45 @@ activate_mode_internal (GstPad * pad, GstObject * parent, GstPadMode mode,
   dir = GST_PAD_DIRECTION (pad);
   GST_OBJECT_UNLOCK (pad);
 
+  /* 如果不是激活，新Pad状态就是 GST_PAD_MODE_NONE */
   new = active ? mode : GST_PAD_MODE_NONE;
 
-  if (old == new)
+  if (old == new) /* 如果old pad状态和更改的new pad状态相同，直接退出 */
     goto was_ok;
 
+  /* 如果Pad已经被激活处于Push或者Pull模式下，新状态和以前状态不同，则执行 */
   if (active && old != mode && old != GST_PAD_MODE_NONE) {
-    /* pad was activate in the wrong direction, deactivate it
-     * and reactivate it in the requested mode */
+    
+    /* Pad在错误的@mode模式下已经被激活，我们先把以前的模式停用，再继续激活 */
     GST_DEBUG_OBJECT (pad, "deactivating pad from %s mode",
         gst_pad_mode_get_name (old));
 
-    if (G_UNLIKELY (!activate_mode_internal (pad, parent, old, FALSE)))
+    if (G_UNLIKELY (!activate_mode_internal (pad, parent, old, FALSE))) /* 停用以前的模式 */
       goto deactivate_failed;
     old = GST_PAD_MODE_NONE;
   }
 
   switch (mode) {
-    case GST_PAD_MODE_PULL:
+    case GST_PAD_MODE_PULL: /* Pull模式 */
     {
-      if (dir == GST_PAD_SINK) {
+      if (dir == GST_PAD_SINK) { /* Pull模式，如果Pad方向是Sink */
         if ((peer = gst_pad_get_peer (pad))) {
           GST_DEBUG_OBJECT (pad, "calling peer");
-          if (G_UNLIKELY (!gst_pad_activate_mode (peer, mode, active)))
+          if (G_UNLIKELY (!gst_pad_activate_mode (peer, mode, active))) /* 查看对端Src Pad是否已经被激活，如果没有激活就在Pull模式下激活 */
             goto peer_failed;
           gst_object_unref (peer);
         } else {
-          /* there is no peer, this is only fatal when we activate. When we
-           * deactivate, we must assume the application has unlinked the peer and
-           * will deactivate it eventually. */
+          /* 没有对端Pad，当我们去激活，这里是一个致命的错误。 
+           * 我们必须假设应用程序已经解除链接对端Pad，并且使其停用
+           */
           if (active)
             goto not_linked;
           else
             GST_DEBUG_OBJECT (pad, "deactivating unlinked pad");
         }
-      } else {
+      } else { /* Pull模式，如果Pad方向是Src */
         if (G_UNLIKELY (GST_PAD_GETRANGEFUNC (pad) == NULL))
-          goto failure;         /* Can't activate pull on a src without a
-                                   getrange function */
+          goto failure;         /* 如果没有一个 getrange函数，不能在Pull模式下激活src */   
       }
       break;
     }
@@ -1204,22 +1247,21 @@ activate_mode_internal (GstPad * pad, GstObject * parent, GstPadMode mode,
       break;
   }
 
-  /* Mark pad as needing reconfiguration */
+  /* 标记Pad需要重新配置 */
   if (active)
     GST_OBJECT_FLAG_SET (pad, GST_PAD_FLAG_NEED_RECONFIGURE);
 
-  /* pre_activate returns TRUE if we weren't already in the process of
-   * switching to the 'new' mode */
-  if (pre_activate (pad, new)) {
+  /* 如果我们之前还没有切换到'new'模式，pre_activate返回TRUE（这里面设定in_activation=TRUE），表示正在激活 */
+  if (pre_activate (pad, new)) { /* 一般情况下都是返回TRUE */
 
-    if (GST_PAD_ACTIVATEMODEFUNC (pad)) {
-      if (G_UNLIKELY (!GST_PAD_ACTIVATEMODEFUNC (pad) (pad, parent, mode,
-                  active)))
+    if (GST_PAD_ACTIVATEMODEFUNC (pad)) { /* 如果有激活模式函数，则执行 */
+      if (G_UNLIKELY (!GST_PAD_ACTIVATEMODEFUNC (pad) (pad, parent, mode, active))) /* 调用激活调度模式虚函数 */
         goto failure;
     } else {
       /* can happen for sinks of passthrough elements */
     }
 
+    /* 设置  pad->priv->in_activation = FALSE;  */
     post_activate (pad, new);
   }
 
@@ -1284,20 +1326,15 @@ failure:
 }
 
 /**
- * gst_pad_activate_mode:
- * @pad: the #GstPad to activate or deactivate.
- * @mode: the requested activation mode
- * @active: whether or not the pad should be active.
- *
- * Activates or deactivates the given pad in @mode via dispatching to the
- * pad's activatemodefunc. For use from within pad activation functions only.
- *
- * If you don't know what this is, you probably don't want to call it.
- *
- * Returns: %TRUE if the operation was successful.
- *
+ * @name: gst_pad_activate_mode
+ * @calledby: activate_mode_internal () ，调用该函数的目的就是检查是否激活，
+ * @brief: 1.可以用来检测Pad是否激活，并且处于@mode激活模式下。
+ *         2.如果Pad目前不处于@mode，会根据@mode和@active激活或者停用Pad。
+ * @note: 该函数仅供内部激活函数使用
+ *        停用状态下的Pad，模式一定会被内部修改为 GST_PAD_MODE_NONE
+ * 
  * MT safe.
- */
+*/
 gboolean
 gst_pad_activate_mode (GstPad * pad, GstPadMode mode, gboolean active)
 {
@@ -3774,10 +3811,16 @@ already_called:
 #define PROBE_PULL(pad,mask,data,offs,size,label)		\
   PROBE_FULL(pad, mask, data, offs, size, label, FALSE, label);
 
+
+/**
+ * @name: do_pad_idle_probe_wait
+ * @calledby: do_probe_callbacks ()
+ * @brief: 等待空闲探针函数执行完毕
+*/
 static GstFlowReturn
 do_pad_idle_probe_wait (GstPad * pad)
 {
-  while (GST_PAD_IS_RUNNING_IDLE_PROBE (pad)) {
+  while (GST_PAD_IS_RUNNING_IDLE_PROBE (pad)) {   /* 等待空闲监听函数执行完毕 */
     GST_CAT_LOG_OBJECT (GST_CAT_SCHEDULING, pad,
         "waiting idle probe to be removed");
     GST_OBJECT_FLAG_SET (pad, GST_PAD_FLAG_BLOCKING);
@@ -3791,6 +3834,12 @@ do_pad_idle_probe_wait (GstPad * pad)
   return GST_FLOW_OK;
 }
 
+/**
+ * 成立的三种情况：
+ * 1. 往下游传递事件或者FLUSH事件 && 事件类型是序列化类型
+ * 2. 查询下游 && 查询类型是序列化类型
+ * 3. type是GST_PAD_PROBE_TYPE_BUFFER或GST_PAD_PROBE_TYPE_BUFFER_LIST就是序列化监听
+ */
 #define PROBE_TYPE_IS_SERIALIZED(i) \
     ( \
       ( \
@@ -5429,7 +5478,10 @@ sticky_changed (GstPad * pad, PadEvent * ev, gpointer user_data)
   return TRUE;
 }
 
-/* should be called with pad LOCK */
+
+/**
+ * @note: 被调用的时候，应用先使用 pad LOCK
+ */
 static GstFlowReturn
 gst_pad_push_event_unchecked (GstPad * pad, GstEvent * event,
     GstPadProbeType type)
@@ -5439,8 +5491,7 @@ gst_pad_push_event_unchecked (GstPad * pad, GstEvent * event,
   GstEventType event_type;
   gint64 old_pad_offset = pad->offset;
 
-  /* pass the adjusted event on. We need to do this even if
-   * there is no peer pad because of the probes. */
+  /* pass the adjusted event on. We need to do this even if there is no peer pad because of the probes. */
   event = apply_pad_offset (pad, event, GST_PAD_IS_SINK (pad));
 
   /* Two checks to be made:

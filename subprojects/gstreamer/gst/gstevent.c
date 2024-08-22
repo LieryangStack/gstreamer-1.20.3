@@ -89,7 +89,7 @@ typedef struct
   GstEvent event;
 
   GstStructure *structure;
-  gint64 running_time_offset;
+  gint64 running_time_offset; /* 运行时间偏移 */
 } GstEventImpl;
 
 #define GST_EVENT_STRUCTURE(e)  (((GstEventImpl *)(e))->structure)
