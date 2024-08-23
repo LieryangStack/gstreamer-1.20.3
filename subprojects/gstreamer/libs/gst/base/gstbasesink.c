@@ -2307,9 +2307,10 @@ gst_base_sink_adjust_time (GstBaseSink * basesink, GstClockTime time)
  * @sink: the sink
  * @time: the running_time to be reached
  * @jitter: (out) (allow-none): the jitter to be filled with time diff, or %NULL
+ * 
+ * 如果我们设置了 sink->sync 为 FALSE，这个函数将会直接返回。
  *
- * This function will block until @time is reached. It is usually called by
- * subclasses that use their own internal synchronisation.
+ *  It is usually called by subclasses that use their own internal synchronisation.
  *
  * If @time is not valid, no synchronisation is done and %GST_CLOCK_BADTIME is
  * returned. Likewise, if synchronisation is disabled in the element or there
@@ -2338,7 +2339,7 @@ gst_base_sink_wait_clock (GstBaseSink * sink, GstClockTime time,
     goto invalid_time;
 
   GST_OBJECT_LOCK (sink);
-  if (G_UNLIKELY (!sink->sync))
+  if (G_UNLIKELY (!sink->sync)) /* 如果设置了不同步，则会立即返回 */
     goto no_sync;
 
   if (G_UNLIKELY ((clock = GST_ELEMENT_CLOCK (sink)) == NULL))
@@ -2606,8 +2607,7 @@ gst_base_sink_wait (GstBaseSink * sink, GstClockTime time,
     /* compensate for latency, ts_offset and render delay */
     stime = gst_base_sink_adjust_time (sink, time);
 
-    /* wait for the clock, this can be interrupted because we got shut down or
-     * we PAUSED. */
+    /* 阻塞等待时钟stime到达，这可能会被中断，因为我们被关闭或我们暂停。（如果设置了sync是FALSE，则立即返回）*/
     status = gst_base_sink_wait_clock (sink, stime, jitter);
 
     GST_DEBUG_OBJECT (sink, "clock returned %d", status);
@@ -3706,8 +3706,13 @@ after_eos:
   }
 }
 
-/* default implementation to calculate the start and end
- * timestamps on a buffer, subclasses can override
+
+/**
+ * @brief:计算@buffer开始显示（渲染）的时间戳和结束显示（渲染）的时间戳
+ *        start = buffer->dts（或者buffer->pts）
+ *        end = buffer->dts（或者buffer->pts）+ buffer->duration
+ * 
+ * @note: 这个函数可以被子类重写。
  */
 static void
 gst_base_sink_default_get_times (GstBaseSink * basesink, GstBuffer * buffer,
@@ -3715,11 +3720,12 @@ gst_base_sink_default_get_times (GstBaseSink * basesink, GstBuffer * buffer,
 {
   GstClockTime timestamp, duration;
 
-  /* first sync on DTS, else use PTS */
+  /* 如果时间戳DTS无效，则使用PTS */
   timestamp = GST_BUFFER_DTS (buffer);
   if (!GST_CLOCK_TIME_IS_VALID (timestamp))
     timestamp = GST_BUFFER_PTS (buffer);
 
+  /* 如果DTS或者PTS其中一个有效，则执行 */
   if (GST_CLOCK_TIME_IS_VALID (timestamp)) {
     /* get duration to calculate end time */
     duration = GST_BUFFER_DURATION (buffer);
@@ -3749,13 +3755,15 @@ gst_base_sink_needs_preroll (GstBaseSink * basesink)
   return res;
 }
 
-/* with STREAM_LOCK, PREROLL_LOCK
- *
- * Takes a buffer and compare the timestamps with the last segment.
- * If the buffer falls outside of the segment boundaries, drop it.
- * Else send the buffer for preroll and rendering.
- *
- * This function takes ownership of the buffer.
+
+/**
+ * @brief: 接收一个缓冲区，并将其时间戳ts与最后一个segment比较
+ *         如果缓冲区超出了segment的边界，则丢弃它；否则，将缓冲区进行preroll和rendering
+ *         这个函数将获取缓冲区的所有权
+ * 
+ * @param obj: GstBuffer对象
+ * 
+ * with STREAM_LOCK, PREROLL_LOCK
  */
 static GstFlowReturn
 gst_base_sink_chain_unlocked (GstBaseSink * basesink, GstPad * pad,
@@ -3764,6 +3772,7 @@ gst_base_sink_chain_unlocked (GstBaseSink * basesink, GstPad * pad,
   GstBaseSinkClass *bclass;
   GstBaseSinkPrivate *priv = basesink->priv;
   GstFlowReturn ret = GST_FLOW_OK;
+  /* @obj渲染开始和结束时间戳 */
   GstClockTime start = GST_CLOCK_TIME_NONE, end = GST_CLOCK_TIME_NONE;
   GstSegment *segment;
   GstBuffer *sync_buf;
@@ -3812,23 +3821,18 @@ gst_base_sink_chain_unlocked (GstBaseSink * basesink, GstPad * pad,
 
   bclass = GST_BASE_SINK_GET_CLASS (basesink);
 
-  /* check if the buffer needs to be dropped, we first ask the subclass for the
-   * start and end */
+  /* 获取这个Buffer渲染开始和结束的时间戳 */
   if (bclass->get_times)
     bclass->get_times (basesink, sync_buf, &start, &end);
 
   if (!GST_CLOCK_TIME_IS_VALID (start)) {
-    /* if the subclass does not want sync, we use our own values so that we at
-     * least clip the buffer to the segment */
     gst_base_sink_default_get_times (basesink, sync_buf, &start, &end);
   }
 
   GST_DEBUG_OBJECT (basesink, "got times start: %" GST_TIME_FORMAT
       ", end: %" GST_TIME_FORMAT, GST_TIME_ARGS (start), GST_TIME_ARGS (end));
 
-  /* a dropped buffer does not participate in anything. Buffer can only be
-   * dropped if their PTS falls completely outside the segment, while we sync
-   * preferably on DTS */
+  /* 只有当缓冲区的PTS不在segment范围内，缓冲区才会被drop，而我们最后在DTS上进行sync */
   if (GST_CLOCK_TIME_IS_VALID (start) && (segment->format == GST_FORMAT_TIME)) {
     GstClockTime pts = GST_BUFFER_PTS (sync_buf);
     GstClockTime pts_end = GST_CLOCK_TIME_NONE;
@@ -3914,8 +3918,7 @@ again:
   late = FALSE;
   step_end = FALSE;
 
-  /* synchronize this object, non syncable objects return OK
-   * immediately. */
+  /* synchronize this object, non syncable objects return OK immediately. */
   ret = gst_base_sink_do_sync (basesink, GST_MINI_OBJECT_CAST (sync_buf),
       &late, &step_end);
   if (G_UNLIKELY (ret != GST_FLOW_OK))

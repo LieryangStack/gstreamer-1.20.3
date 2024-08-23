@@ -44,12 +44,10 @@ typedef struct _GstSystemClockPrivate GstSystemClockPrivate;
 
 /**
  * GstClockType:
- * @GST_CLOCK_TYPE_REALTIME: time since Epoch
- * @GST_CLOCK_TYPE_MONOTONIC: monotonic time since some unspecified starting
- *                            point
+ * @GST_CLOCK_TYPE_REALTIME: 计时从 Unix 纪元（1970 年 1 月 1 日）开始。
+ * @GST_CLOCK_TYPE_MONOTONIC: 计时从某个未指定的起始点开始（系统开机时记起），不会因为系统时间的调整而改变。
  * @GST_CLOCK_TYPE_OTHER: some other time source is used (Since: 1.0.5)
- * @GST_CLOCK_TYPE_TAI: time since Epoch, but using International Atomic Time
- *                      as reference (Since: 1.18)
+ * @GST_CLOCK_TYPE_TAI: 使用国际原子时（TAI）作为参考的时钟类型，计时从 Unix 纪元开始。
  *
  * The different kind of clocks.
  */

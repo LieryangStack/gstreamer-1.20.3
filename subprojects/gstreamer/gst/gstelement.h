@@ -772,9 +772,10 @@ struct _GstElement
   GstBus               *bus;
 
   /* allocated clock */
-  GstClock             *clock;
+  GstClock             *clock; /* GST_TYPE_SYSTEM_CLOCK对象类型，使用的时钟一般是系统运行时间 */
+  /* 如果是NULL或者READY状态，则是0，如果是PAUSED状态，就是当前的系统运行时间，如果是PLAYING，就是开始运行那一刻的时间 */
   GstClockTimeDiff      base_time; /* NULL/READY: 0 - PAUSED: current time - PLAYING: difference to clock */
-  GstClockTime          start_time;
+  GstClockTime          start_time;/* 上一次暂停pipeline的时间running time，以便恢复播放的时候从该点继续播放 */
 
   /* element pads, these lists can only be iterated while holding
    * the LOCK or checking the cookie after each LOCK. */

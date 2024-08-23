@@ -89,7 +89,7 @@ struct _GstBaseSink {
 
   /*< protected >*/ /* with STREAM_LOCK */
   gboolean       have_newsegment;
-  GstSegment     segment;
+  GstSegment     segment; /* 存储Segment事件中的 segment */
 
   /*< private >*/ /* with LOCK */
   GstClockID     clock_id;
@@ -171,7 +171,9 @@ struct _GstBaseSinkClass {
    * @start: (out): the start #GstClockTime
    * @end: (out): the end #GstClockTime
    *
-   * Get the start and end times for syncing on this buffer.
+   * 计算@buffer开始显示（渲染）的时间戳和结束显示（渲染）的时间戳
+   * 默认获取时间函数：start = buffer->dts（或者buffer->pts）
+   *                end = buffer->dts（或者buffer->pts）+ buffer->duration
    */
   void          (*get_times)    (GstBaseSink *sink, GstBuffer *buffer,
                                  GstClockTime *start, GstClockTime *end);

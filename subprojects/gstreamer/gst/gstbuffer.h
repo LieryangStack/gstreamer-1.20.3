@@ -285,12 +285,19 @@ struct _GstBuffer {
   GstBufferPool         *pool;
 
   /* timestamp */
-  GstClockTime           pts;
-  GstClockTime           dts;
-  GstClockTime           duration;
+  GstClockTime           pts; /* 这个buffer（帧）在这个时间节点进行渲染。如果未知或不相关，则可以为 #GST_CLOCK_TIME_NONE */
+  GstClockTime           dts; /* 这个buffer（帧）解码时间戳。如果未知或不相关，则可以为 #GST_CLOCK_TIME_NONE */
+  GstClockTime           duration; /* 这个buffer(帧)渲染持续时间（显示持续时间）*/
 
-  /* media specific offset */
+  /* 缓冲区数据的媒体特定偏移量 */
+
+  /**
+   * 对于视频帧，这是该缓冲区的帧号。
+   * 对于音频样本，这是该缓冲区中第一个样本的偏移量。
+   * 对于文件数据或压缩数据，这是该缓冲区中第一个字节的字节偏移量。
+   */
   guint64                offset;
+  /* 该缓冲区包含的最后一个偏移量 */
   guint64                offset_end;
 };
 
