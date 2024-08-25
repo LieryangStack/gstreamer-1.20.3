@@ -2434,7 +2434,7 @@ gst_base_sink_wait_preroll (GstBaseSink * sink)
 {
   sink->have_preroll = TRUE;
   GST_DEBUG_OBJECT (sink, "waiting in preroll for flush or PLAYING");
-  /* block until the state changes, or we get a flush, or something */
+  /* 这里会阻塞，直到@sink元素状态变成播放，或者得到flush事件，或者other会退出阻塞 */
   GST_BASE_SINK_PREROLL_WAIT (sink);
   sink->have_preroll = FALSE;
   if (G_UNLIKELY (sink->flushing))
@@ -2462,14 +2462,13 @@ step_unlocked:
 /**
  * gst_base_sink_do_preroll:
  * @sink: the sink
- * @obj: (transfer none): the mini object that caused the preroll
+ * @obj: (transfer none): the mini object that caused the preroll （有时候就是GstBuffer）
+ * 
+ * 如果 @sink 创建了自己的线程，使用 pull 模式拉取缓冲区，那么在拉取缓冲区后应该调用该函数。
+ * 如果 @sink 需要去preroll，这个函数就会执行 preroll，这将会阻塞一直等待 @sink 状态的变化。
+ * 
+ * @note: 这个函数应被调用过程中应该使用 PREROLL_LOCK 锁
  *
- * If the @sink spawns its own thread for pulling buffers from upstream it
- * should call this method after it has pulled a buffer. If the element needed
- * to preroll, this function will perform the preroll and will then block
- * until the element state is changed.
- *
- * This function should be called with the PREROLL_LOCK held.
  *
  * Returns: %GST_FLOW_OK if the preroll completed and processing can
  * continue. Any other return value should be returned from the render vmethod.
@@ -2528,7 +2527,7 @@ gst_base_sink_do_preroll (GstBaseSink * sink, GstMiniObject * obj)
     /* need to recheck here because the commit state could have
      * made us not need the preroll anymore */
     if (G_LIKELY (sink->need_preroll)) {
-      /* block until the state changes, or we get a flush, or something */
+      /* 这里会阻塞，直到@sink元素状态变成播放，或者得到flush事件，或者other会退出阻塞 */
       ret = gst_base_sink_wait_preroll (sink);
       if ((ret != GST_FLOW_OK) && (ret != GST_FLOW_STEP))
         goto preroll_failed;
@@ -3888,8 +3887,8 @@ gst_base_sink_chain_unlocked (GstBaseSink * basesink, GstPad * pad,
       }
     }
 
-    /* We are about to prepare the first frame, make sure we have prerolled
-     * already. This prevent nesting prepare/render calls. */
+    /* 我们即将准备第一帧，确保已经完成了 preroll
+     * 这可以防止嵌套的 prepare/render 调用。 */
     ret = gst_base_sink_do_preroll (basesink, obj);
     if (G_UNLIKELY (ret != GST_FLOW_OK))
       goto preroll_failed;
