@@ -513,7 +513,7 @@ gst_splitmux_sink_class_init (GstSplitMuxSinkClass * klass)
    * @splitmux: the #GstSplitMuxSink
    *
    * When called by the user, this action signal splits the video file (and begins a new one) immediately.
-   * The current GOP will be output to the new file.
+   * The current GOP will be output to the new file. 我的理解：这组GOP将会保存到新的分割文件中
    *
    * Since: 1.14
    */
@@ -528,7 +528,7 @@ gst_splitmux_sink_class_init (GstSplitMuxSinkClass * klass)
    * @splitmux: the #GstSplitMuxSink
    *
    * When called by the user, this action signal splits the video file (and begins a new one) immediately.
-   * Unlike the 'split-now' signal, with 'split-after', the current GOP will be output to the old file.
+   * Unlike the 'split-now' signal, with 'split-after', the current GOP will be output to the old file. 我的理解：这组GOP将会保存到上一个（旧的）分割文件中
    *
    * Since: 1.16
    */
