@@ -1635,6 +1635,7 @@ request_next_keyframe (GstSplitMuxSink * splitmux, GstBuffer * buffer,
   newest_gop->sent_fku = TRUE;
 
   splitmux->next_fku_time = next_fku_time;
+  /* 这个事件用于请求上游元素生成一个关键帧（I 帧） */
   ev = gst_video_event_new_upstream_force_key_unit (target_time, TRUE, 0);
 
   return gst_pad_push_event (splitmux->reference_ctx->sinkpad, ev);
