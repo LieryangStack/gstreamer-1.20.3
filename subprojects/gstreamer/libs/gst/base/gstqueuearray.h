@@ -33,6 +33,10 @@ G_BEGIN_DECLS
  */
 typedef struct _GstQueueArray GstQueueArray;
 
+/**
+ * gst_queue_array_new 和 gst_queue_array_new_for_struct 区别是：
+ * struct会开辟内存存储数据，非struct只是存储地址。
+ */
 GST_BASE_API
 GstQueueArray * gst_queue_array_new       (guint initial_size);
 
@@ -78,7 +82,10 @@ GST_BASE_API
 guint           gst_queue_array_get_length (GstQueueArray * array);
 
 /* Functions for use with structures */
-
+/**
+ * @struct_size: 数组中每个元素占用多少字节的内存（比如存储的是某个结构体， struct_size = sizeof(structure）
+ * @initial_size: 初始预分配多少个元素（只是预分配，还没有使用）
+ */
 GST_BASE_API
 GstQueueArray * gst_queue_array_new_for_struct (gsize struct_size,
                                                 guint initial_size);

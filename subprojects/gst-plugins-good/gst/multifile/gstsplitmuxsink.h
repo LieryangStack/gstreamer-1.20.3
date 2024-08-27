@@ -69,7 +69,7 @@ typedef struct _MqStreamBuf
 
 typedef struct {
   /* For the very first GOP if it was created from a GAP event */
-  gboolean from_gap;
+  gboolean from_gap; /* 来自GST_EVENT_GAP事件，然后所创建的 InputGop */
 
   /* Minimum start time (PTS or DTS) of the GOP */
   GstClockTimeDiff start_time;
@@ -84,7 +84,7 @@ typedef struct {
    * that we've collected into the GOP */
   guint64 reference_bytes;
 
-  gboolean sent_fku;
+  gboolean sent_fku; /* 是否已经发送了请求关键帧事件 */
 } InputGop;
 
 /**
@@ -147,7 +147,8 @@ struct _GstSplitMuxSink
   /* created from threshold_timecode_str */
   GstVideoTimeCodeInterval *tc_interval;
   GstClockTime alignment_threshold;
-  /* expected running time of next force keyframe unit event */
+
+  /* 下一个关键帧被期望产生的时间 */
   GstClockTime next_fku_time;
 
   gboolean reset_muxer;

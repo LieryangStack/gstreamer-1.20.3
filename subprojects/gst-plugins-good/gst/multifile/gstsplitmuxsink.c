@@ -620,6 +620,10 @@ gst_splitmux_sink_init (GstSplitMuxSink * splitmux)
   GST_OBJECT_FLAG_SET (splitmux, GST_ELEMENT_FLAG_SINK);
   splitmux->split_requested = FALSE;
   splitmux->do_split_next_gop = FALSE;
+
+  /* @struct_size表示队列中每个元素的大小，这里是GstClockTime，所以是8字节 
+   * @initial_size 表示队列初始大小（队列中预分配的元素的数量，并不是数组实际有8个，是预先给8个元素创建了堆内存）。
+   */
   splitmux->times_to_split = gst_queue_array_new_for_struct (8, 8);
   splitmux->next_fku_time = GST_CLOCK_TIME_NONE;
 
@@ -1482,7 +1486,7 @@ calculate_next_max_timecode (GstSplitMuxSink * splitmux,
 
 static gboolean
 request_next_keyframe (GstSplitMuxSink * splitmux, GstBuffer * buffer,
-    GstClockTimeDiff running_time_dts)
+                       GstClockTimeDiff running_time_dts)
 {
   GstEvent *ev;
   GstClockTime target_time;
@@ -2341,8 +2345,8 @@ ctx_set_unblock (MqStreamCtx * ctx)
 static gboolean
 need_new_fragment (GstSplitMuxSink * splitmux,
     GstClockTime queued_time, GstClockTime queued_gop_time,
-    guint64 queued_bytes)
-{
+    guint64 queued_bytes) {
+    
   guint64 thresh_bytes;
   GstClockTime thresh_time;
   gboolean check_robust_muxing;
@@ -2614,10 +2618,11 @@ error_queued_time:
   return;
 }
 
-/* Called with splitmux lock held */
-/* Called from each input pad when it is has all the pieces
- * for a GOP or EOS, starting with the reference pad which has set the
- * splitmux->max_in_running_time
+
+/**
+ * @brief: 当输入 pad 拥有 GOP（Group of Pictures）或 EOS（End of Stream）的所有片段时调用此函数，
+ *         从设置了 splitmux->max_in_running_time 的参考 pad 开始。
+ * @note: 被调用前必须有 splitmux 锁
  */
 static void
 check_completed_gop (GstSplitMuxSink * splitmux, MqStreamCtx * ctx)
@@ -2804,7 +2809,7 @@ handle_mq_input (GstPad * pad, GstPadProbeInfo * info, MqStreamCtx * ctx)
         ctx->in_running_time = GST_CLOCK_STIME_NONE;
         GST_SPLITMUX_UNLOCK (splitmux);
         break;
-      case GST_EVENT_EOS:
+      case GST_EVENT_EOS: /* 如果接受到 EOS事件，就会调用 check_completed_gop 函数 */
         GST_SPLITMUX_LOCK (splitmux);
         ctx->in_eos = TRUE;
 
@@ -2830,7 +2835,7 @@ handle_mq_input (GstPad * pad, GstPadProbeInfo * info, MqStreamCtx * ctx)
         }
         GST_SPLITMUX_UNLOCK (splitmux);
         break;
-      case GST_EVENT_GAP:{
+      case GST_EVENT_GAP:{ 
         GstClockTime gap_ts;
         GstClockTimeDiff rtime;
 
@@ -3013,11 +3018,14 @@ handle_mq_input (GstPad * pad, GstPadProbeInfo * info, MqStreamCtx * ctx)
     }
 
 
-    /* First check if we're at the very first GOP and the tracking was created
-     * from a GAP event. In that case don't start a new GOP on keyframes but
-     * just updated it as needed */
+
+    /* 首先，我们检查尾部的queue元素，如果是由GAP事件创建，我们不需要在关键帧上启动新的GOP，而只是根据需要进行更新 */
     gop = g_queue_peek_tail (&splitmux->pending_input_gops);
 
+    /**
+     * 如果队列中没有 InputGop，创建新的 InputGop 
+     * 如果 InputGop 不是来自 GAP事件，并且该@buf不是关键帧，则创建 InputGop
+     */
     if (!gop || (!gop->from_gap
             && !GST_BUFFER_FLAG_IS_SET (buf, GST_BUFFER_FLAG_DELTA_UNIT))) {
       gop = g_slice_new0 (InputGop);
@@ -3379,6 +3387,7 @@ gst_splitmux_sink_request_new_pad (GstElement * element,
 
   if (g_str_equal (templ->name_template, "video") ||
       g_str_has_prefix (templ->name_template, "video_aux_")) {
+    /* 表示这个输入口pad是 video（对应就是mux的video sink pad） */
     is_primary_video = g_str_equal (templ->name_template, "video");
     if (is_primary_video && splitmux->have_video)
       goto already_have_video;
@@ -3521,12 +3530,13 @@ gst_splitmux_sink_request_new_pad (GstElement * element,
       g_signal_connect (q, "overrun", (GCallback) handle_q_overrun, ctx); /* 队列数据过多，下游没来得及处理速度 */
   g_signal_connect (q, "underrun", (GCallback) handle_q_underrun, ctx); /* 队列数据过少，不够下游处理速度 */
 
-  /* 监听队列src_pad阻塞监听函数 */
+  /* 监听queue src_pad阻塞监听函数 */
   ctx->src_pad_block_id =
       gst_pad_add_probe (q_src,
       GST_PAD_PROBE_TYPE_DATA_DOWNSTREAM | GST_PAD_PROBE_TYPE_EVENT_FLUSH,
       (GstPadProbeCallback) handle_mq_output, ctx, NULL);
   
+
   if (is_primary_video && splitmux->reference_ctx != NULL) {
     splitmux->reference_ctx->is_reference = FALSE;
     splitmux->reference_ctx = NULL;

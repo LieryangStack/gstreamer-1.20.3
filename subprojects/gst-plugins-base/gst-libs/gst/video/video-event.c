@@ -133,9 +133,9 @@ gst_video_event_new_downstream_force_key_unit (GstClockTime timestamp,
 
 /**
  * gst_video_event_new_upstream_force_key_unit:
- * @running_time: the running_time at which a new key unit should be produced
- * @all_headers: %TRUE to produce headers when starting a new key unit
- * @count: integer that can be used to number key units
+ * @running_time: 在@running_time时间会产生一个关键帧
+ * @all_headers: 如果这设定为TRUE表示当开始一个关键帧前会生成 headers
+ * @count: 可用于对关键帧进行编号的整数
  *
  * Creates a new upstream force key unit event. An upstream force key unit event
  * can be sent to request upstream elements to produce a key unit.

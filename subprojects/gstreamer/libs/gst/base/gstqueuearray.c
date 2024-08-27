@@ -52,8 +52,8 @@ struct _GstQueueArray
 
 /**
  * gst_queue_array_new_for_struct: (skip)
- * @struct_size: Size of each element (e.g. structure) in the array
- * @initial_size: Initial size of the new queue
+ * @struct_size: 数组中每个元素占用多少字节的内存（比如存储的是某个结构体， struct_size = sizeof(structure）
+ * @initial_size: 初始预分配多少个元素（只是预分配，还没有使用）
  *
  * Allocates a new #GstQueueArray object for elements (e.g. structures)
  * of size @struct_size, with an initial queue size of @initial_size.
