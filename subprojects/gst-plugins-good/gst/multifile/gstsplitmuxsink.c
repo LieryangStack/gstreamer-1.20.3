@@ -2720,7 +2720,7 @@ check_completed_gop (GstSplitMuxSink * splitmux, MqStreamCtx * ctx)
             GST_STIME_ARGS (tmpctx->in_running_time), tmpctx->in_eos);
 
         if (next_gop_start != GST_CLOCK_STIME_NONE &&
-            tmpctx->in_running_time < next_gop_start && !tmpctx->in_eos) {
+            tmpctx->in_running_time < next_gop_start && !tmpctx->in_eos) {  /* 通过每组GOP关键帧开始时间，判断是否完成一组GOP */
           GST_LOG_OBJECT (splitmux,
               "Context %p sink pad %" GST_PTR_FORMAT " not ready. We'll sleep",
               tmpctx, tmpctx->sinkpad);
