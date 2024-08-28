@@ -3656,7 +3656,6 @@ static GstElement *
 create_element (GstSplitMuxSink * splitmux,
     const gchar * factory, const gchar * name, gboolean locked)
 {
-  g_print ("%s factory = %s\n", __func__, factory);
   GstElement *ret = gst_element_factory_make (factory, name);
   if (ret == NULL) {
     g_warning ("Failed to create %s - splitmuxsink will not work", name);
