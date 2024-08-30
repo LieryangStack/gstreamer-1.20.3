@@ -2498,16 +2498,15 @@ handle_gathered_gop (GstSplitMuxSink * splitmux, const InputGop * gop,
   GstClockTimeDiff queued_gop_time = 0;
   SplitMuxOutputCommand *cmd;
 
-  /* Assess if the multiqueue contents overflowed the current file */
-  /* When considering if a newly gathered GOP overflows
-   * the time limit for the file, only consider the running time of the
-   * reference stream. Other streams might have run ahead a little bit,
-   * but extra pieces won't be released to the muxer beyond the reference
-   * stream cut-off anyway - so it forms the limit. */
+  /**
+   * 确定是否 multiqueue 内容是否溢出了当前文件
+   * 考虑最新收集的 GOP 是否超出了文件的时间限制，只考虑参考流的运行时间。其他流可能会稍微提前运行，
+   * 但额外的片段无论如何都不会在参考流的截止点之后被释放到复用器中，因此参考流构成了这个时间限制。 
+   */
   queued_bytes = splitmux->fragment_total_bytes + gop->total_bytes;
   queued_time = next_gop_start_time;
-  /* queued_gop_time tracks how much unwritten data there is waiting to
-   * be written to this fragment including this GOP */
+
+  /* queued_gop_time 记录了等待写入此片段的未写数据量，包括此 GOP */
   if (splitmux->reference_ctx->out_running_time != GST_CLOCK_STIME_NONE)
     queued_gop_time = queued_time - splitmux->reference_ctx->out_running_time;
   else
