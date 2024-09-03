@@ -3200,6 +3200,10 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
     /* And now handle the current buffer if detection worked */
   }
 
+  /**
+   * 这里的buffer是由上游的rtsp元素传来的。
+   * 此时的pts应该是一直有效，应该是随着时间递增的。dts是无效的。
+   */
   if (G_LIKELY (buffer)) {
     GST_LOG_OBJECT (parse,
         "buffer size: %" G_GSIZE_FORMAT ", offset = %" G_GINT64_FORMAT
@@ -3231,11 +3235,16 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
         parse->priv->discont = TRUE;
       }
     }
+
+    /* 存储buffer地址到adapter对象的队列中 */
     gst_adapter_push (parse->priv->adapter, buffer);
   }
 
-  /* Parse and push as many frames as possible */
-  /* Stop either when adapter is empty or we are flushing */
+
+  /**
+   * 解析并push更多的帧
+   * 当 parse->priv->adapter 为空 或者 正在刷新的时候不执行
+   */
   while (!parse->priv->flushing) {
     gint flush = 0;
     gboolean updated_prev_pts = FALSE;
@@ -3259,7 +3268,7 @@ gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
       goto done;
     }
 
-    /* move along with upstream timestamp (if any),
+    /* 沿着上游时间戳移动(如果有的话),
      * but interpolate in between */
     pts = gst_adapter_prev_pts (parse->priv->adapter, NULL);
     dts = gst_adapter_prev_dts (parse->priv->adapter, NULL);

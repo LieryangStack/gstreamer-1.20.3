@@ -371,8 +371,7 @@ copy_into_unchecked (GstAdapter * adapter, guint8 * dest, gsize skip,
  * @adapter: a #GstAdapter
  * @buf: (transfer full): a #GstBuffer to add to queue in the adapter
  *
- * Adds the data from @buf to the data stored inside @adapter and takes
- * ownership of the buffer.
+ * 把 @buffer 存储到 adapter对象的队列中
  */
 void
 gst_adapter_push (GstAdapter * adapter, GstBuffer * buf)

@@ -886,6 +886,8 @@ gst_h265_parse_process_nal (GstH265Parse * h265parse, GstH265NalUnit * nalu)
 
       pres = gst_h265_parser_parse_slice_hdr (nalparser, nalu, &slice);
 
+      // g_print ("slice.pic_order_cnt_lsb = %d\n", slice.pic_order_cnt_lsb);
+
       if (pres == GST_H265_PARSER_OK) {
         if (GST_H265_IS_I_SLICE (&slice))
           h265parse->keyframe = TRUE;

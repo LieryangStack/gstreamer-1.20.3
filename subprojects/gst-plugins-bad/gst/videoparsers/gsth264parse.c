@@ -1086,6 +1086,8 @@ gst_h264_parse_process_nal (GstH264Parse * h264parse, GstH264NalUnit * nalu)
         h264parse->field_pic_flag = slice.field_pic_flag;
       }
 
+       g_print ("slice.pic_order_cnt_lsb = %d\n", slice.pic_order_cnt_lsb);
+
       if (G_LIKELY (nal_type != GST_H264_NAL_SLICE_IDR &&
               !h264parse->push_codec))
         break;
