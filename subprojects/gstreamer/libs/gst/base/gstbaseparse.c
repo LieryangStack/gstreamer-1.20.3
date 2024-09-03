@@ -3070,6 +3070,10 @@ notfound:
   }
 }
 
+/**
+ * @brief： 只要是继承GstBaseParse元素的解析元素，首先会调用该链函数
+ *          然后调用各自解析元素实现的 handle_frame 虚函数
+ */
 static GstFlowReturn
 gst_base_parse_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
 {

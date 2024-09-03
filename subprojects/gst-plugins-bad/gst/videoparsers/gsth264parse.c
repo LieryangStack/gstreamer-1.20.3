@@ -961,6 +961,8 @@ gst_h264_parse_process_nal (GstH264Parse * h264parse, GstH264NalUnit * nalu)
       h264parse->state &= GST_H264_PARSE_STATE_GOT_PPS;
       pres = gst_h264_parser_parse_sps (nalparser, nalu, &sps);
 
+      // g_print ("pic_order_cnt_type = %d\n", sps.pic_order_cnt_type);
+
     process_sps:
       /* arranged for a fallback sps.id, so use that one and only warn */
       if (pres != GST_H264_PARSER_OK) {
@@ -1085,8 +1087,7 @@ gst_h264_parse_process_nal (GstH264Parse * h264parse, GstH264NalUnit * nalu)
         h264parse->state |= GST_H264_PARSE_STATE_GOT_SLICE;
         h264parse->field_pic_flag = slice.field_pic_flag;
       }
-
-       g_print ("slice.pic_order_cnt_lsb = %d\n", slice.pic_order_cnt_lsb);
+      //  g_print ("slice.pic_order_cnt_lsb = %d\n", slice.pic_order_cnt_lsb);
 
       if (G_LIKELY (nal_type != GST_H264_NAL_SLICE_IDR &&
               !h264parse->push_codec))
