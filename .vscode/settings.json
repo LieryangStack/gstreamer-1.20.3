@@ -12,6 +12,7 @@
     "string": "c",
     "string_view": "c",
     "gstomxh264dec.h": "c",
-    "gsth265parser.h": "c"
+    "gsth265parser.h": "c",
+    "gsth264parser.h": "c"
   }
 }

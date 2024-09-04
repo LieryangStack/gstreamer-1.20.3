@@ -4047,7 +4047,7 @@ gst_base_parse_set_passthrough (GstBaseParse * parse, gboolean passthrough)
  * @pts_interpolate: 如果解析器应插值 PTS 时间戳，则为 %TRUE
  * 
  * 默认情况下，基类将使用简单的插值（前一个时间戳 + 持续时间）来猜测 PTS 时间戳，
- * 但是这种方法对有重排的流是不正确的，因为在这些流中，PTS 可能会倒退。
+ * 但是这种方法对有重新排序的流（有B帧）是不正确的，因为在这些流中，PTS 可能会倒退。
  * 实现此类格式的子类应该禁用PTS插值。
  *
  * By default, the base class will guess PTS timestamps using a simple
@@ -4068,6 +4068,8 @@ gst_base_parse_set_pts_interpolation (GstBaseParse * parse,
  * gst_base_parse_set_infer_ts:
  * @parse: a #GstBaseParse
  * @infer_ts: %TRUE if parser should infer DTS/PTS from each other
+ * 
+ * 推断时间戳可能值（可能会尝试从 DTS 推断 PTS，也可能会从 PTS 推断 DTS）
  *
  * 默认情况下，基类可能会尝试从 DTS 推断 PTS，反之依然。
  * 虽然这对音频数据通常是正确的，但在其他情况下可能并不适用。
